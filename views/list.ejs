@@ -2,27 +2,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>To Do List</title>
+    <title><%= listTitle %></title>
     <link rel="stylesheet"  href="css/styles.css"></link>
 </head>
 <body>
     <div class="box" id="heading"> 
-        <h1><%=kindOfDay%></h1>
+        <h1><%= listTitle %></h1>
     </div>
 
     <div class="box">
-       <% newItems.forEach(function(item){ %>
+       <% newListItems.forEach(function(item){ %>
         <form action="/delete" method="post">
             <div class='item'>
-                <input type="checkbox" name="itemChecked" value="<%=item._id%>" onChange="this.form.submit()">
+                <input type="checkbox" name="checkbox" value="<%=item._id%>" onChange="this.form.submit()">
                 <p><%= item.name %></p>
             </div>
         </form>
         <% }) %>
 
-        <form action="/" method="post">
+        <form class="item" action="/" method="post">
             <input type="text" name="newItem" placeholder="New Item" autocomplete="off">
-            <button type="submit" name="button">+</button>
+            <button type="submit" name="list" value="<%= listTitle %>" > + </button>
         </form>
     </div>
 </body>

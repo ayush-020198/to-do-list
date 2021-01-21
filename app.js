@@ -1,7 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const _ = require('lodash');
 const app = express();
+
 
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -27,6 +29,13 @@ const item2 = new Item({
 
 const defaultItems = [item1, item2];
 
+const listSchema = {
+    name: String, 
+    items: [itemsSchema]
+};
+
+const List = mongoose.model('list', listSchema);
+
 app.get('/', function(req,res){
     let today = new Date();
     let options = {
@@ -49,33 +58,89 @@ app.get('/', function(req,res){
             });
         }
         else {
-            res.render("list", {kindOfDay:day, newItems: foundItems});
+            res.render("list", {listTitle:day, newListItems: foundItems});
         }  
     });
 });
 
-app.post('/', function(req, res){
-    const itemName = req.body.newItem;
-    
-    const item = new Item({
-        name: itemName
-    })
+app.get('/:customListName', (req, res) => {
+    const customListName = _.capitalize(req.params.customListName);
 
-    item.save();
-    res.redirect('/');
-});
-
-app.post('/delete', function(req, res){
-    const checkedItemID = req.body.itemChecked;
-
-    Item.findByIdAndRemove(checkedItemID, function(err){
+    List.findOne({name: customListName}, (err, foundList) => {
         if(err){
             console.log(err);
         }
-        else {
-            console.log("Successfully Deleted");
+        else{
+            if(!foundList){
+                const list = new List({
+                    name: customListName,
+                    items: defaultItems
+                })
+            
+                list.save();
+                res.redirect('/' + customListName);
+            }
+            else {
+                res.render("list", {listTitle: foundList.name, newListItems: foundList.items});
+            }
         }
+    })
+})
+
+app.post('/', function(req, res){
+    const itemName = req.body.newItem;
+    const listName = req.body.list;
+
+    const item = new Item({
+        name: itemName
     });
+
+    let today = new Date();
+    let options = {
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+    };
+
+    if(listName === today.toLocaleDateString("en-US", options)){
+        item.save();
+        res.redirect('/');
+    }
+    else {
+        List.findOne({name: listName}, (err, foundList) => {
+            foundList.items.push(item);
+            foundList.save();
+            res.redirect('/'+listName);
+        })
+    }
+});
+
+app.post('/delete', function(req, res){
+    const checkedItemID = req.body.checkbox;
+    const listName = req.body.listName;
+
+    if(listName === today.toLocaleDateString("en-US", options)){
+        Item.findByIdAndRemove(checkedItemID, function(err){
+            if(err){
+                console.log(err);
+            }
+            else {
+                console.log("Successfully Deleted");
+                res.redirect('/');
+            }
+        });
+    }
+    else {
+        List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedItemID}}}, (err, foundList) => {
+            if(err){
+                console.log(err);
+            }
+            else {
+                res.redirect('/' + listName);
+            } 
+        })
+    }
+
     res.redirect('/');
 })
 
